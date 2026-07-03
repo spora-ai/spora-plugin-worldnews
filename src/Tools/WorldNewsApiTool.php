@@ -98,14 +98,62 @@ final class WorldNewsApiTool extends AbstractTool
         $settings = $this->configService->getEffectiveSettings(static::class, $agentId, $userId);
         $apiKey = $settings['core.worldnewsapi.api_key'] ?? '';
 
-        $validationFailure = $this->validateApiKey($apiKey);
+        $validationFailure = $this->validateSearchRequest($apiKey, $query);
         if ($validationFailure !== null) {
             return $validationFailure;
+        }
+
+        return $this->executeSearch($arguments, $apiKey, $settings, $query);
+    }
+
+    public function topNews(array $arguments, int $agentId, ?int $userId): ToolResult
+    {
+        $country = trim((string) ($arguments['source-country'] ?? ''));
+        $language = trim((string) ($arguments['language'] ?? ''));
+        $settings = $this->configService->getEffectiveSettings(static::class, $agentId, $userId);
+        $apiKey = $settings['core.worldnewsapi.api_key'] ?? '';
+
+        $validationFailure = $this->validateTopNewsRequest($apiKey, $country, $language);
+        if ($validationFailure !== null) {
+            return $validationFailure;
+        }
+
+        return $this->executeTopNews($arguments, $apiKey, $settings, $country, $language);
+    }
+
+    private function validateSearchRequest(string $apiKey, string $query): ?ToolResult
+    {
+        $apiKeyFailure = $this->validateApiKey($apiKey);
+        if ($apiKeyFailure !== null) {
+            return $apiKeyFailure;
         }
         if ($query === '') {
             return new ToolResult(false, 'The search query cannot be empty.');
         }
+        return null;
+    }
 
+    private function validateTopNewsRequest(string $apiKey, string $country, string $language): ?ToolResult
+    {
+        $apiKeyFailure = $this->validateApiKey($apiKey);
+        if ($apiKeyFailure !== null) {
+            return $apiKeyFailure;
+        }
+        if ($country === '') {
+            return new ToolResult(false, 'source-country is required for top-news.');
+        }
+        if ($language === '') {
+            return new ToolResult(false, 'language is required for top-news.');
+        }
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $settings
+     */
+    private function executeSearch(array $arguments, string $apiKey, array $settings, string $query): ToolResult
+    {
         $queryParams = [
             'text' => $query,
             'number' => min(100, (int) ($arguments['number'] ?? 10)),
@@ -126,24 +174,12 @@ final class WorldNewsApiTool extends AbstractTool
         return $this->formatNewsArticles("News Results for '{$query}':\n\n", $data['news'] ?? [], 'No recent news found for this topic.');
     }
 
-    public function topNews(array $arguments, int $agentId, ?int $userId): ToolResult
+    /**
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $settings
+     */
+    private function executeTopNews(array $arguments, string $apiKey, array $settings, string $country, string $language): ToolResult
     {
-        $country = trim((string) ($arguments['source-country'] ?? ''));
-        $language = trim((string) ($arguments['language'] ?? ''));
-        $settings = $this->configService->getEffectiveSettings(static::class, $agentId, $userId);
-        $apiKey = $settings['core.worldnewsapi.api_key'] ?? '';
-
-        $validationFailure = $this->validateApiKey($apiKey);
-        if ($validationFailure !== null) {
-            return $validationFailure;
-        }
-        if ($country === '') {
-            return new ToolResult(false, 'source-country is required for top-news.');
-        }
-        if ($language === '') {
-            return new ToolResult(false, 'language is required for top-news.');
-        }
-
         $queryParams = [
             'source-country' => $country,
             'language' => $language,
