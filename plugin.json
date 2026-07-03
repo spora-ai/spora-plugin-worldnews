@@ -2,11 +2,11 @@
   "$schema": "https://raw.githubusercontent.com/spora-ai/spora-core/v0.3.0/plugin.schema.json",
   "slug": "worldnews",
   "description": "World News API headlines and search for Spora agents.",
-  "class": "Spora\\\\Plugins\\\\WorldNews\\\\WorldNewsPlugin",
+  "class": "Spora\\Plugins\\WorldNews\\WorldNewsPlugin",
   "icon": "puzzle",
   "autoload": {
     "psr-4": {
-      "Spora\\\\Plugins\\\\WorldNews\\\\": "src/"
+      "Spora\\Plugins\\WorldNews\\": "src/"
     }
   }
 }

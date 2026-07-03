@@ -16,12 +16,12 @@
   },
   "autoload": {
     "psr-4": {
-      "Spora\\\\Plugins\\\\WorldNews\\\\": "src/"
+      "Spora\\Plugins\\WorldNews\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "Spora\\\\Plugins\\\\WorldNews\\\\Tests\\\\": "tests/"
+      "Spora\\Plugins\\WorldNews\\Tests\\": "tests/"
     }
   },
   "scripts": {
