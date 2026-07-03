@@ -7,22 +7,33 @@ use Spora\Services\ToolConfigService;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
-beforeEach(function () {
-    $this->config = Mockery::mock(ToolConfigService::class);
-    $this->client = Mockery::mock(HttpClientInterface::class);
-    $this->tool = new WorldNewsApiTool($this->config, $this->client);
-});
+/**
+ * Build a fresh WorldNewsApiTool with a real config + http-client mock.
+ * Returns [$config, $client, $tool] so tests can wire expectations onto
+ * $config/$client and call $tool->execute(...). PHPStan-friendly: every test
+ * gets a locally-typed $tool without relying on Pest's dynamic $this->.
+ *
+ * @return array{0: ToolConfigService&Mockery\MockInterface, 1: HttpClientInterface&Mockery\MockInterface, 2: WorldNewsApiTool}
+ */
+function makeWorldNewsTool(): array
+{
+    $config = Mockery::mock(ToolConfigService::class);
+    $client = Mockery::mock(HttpClientInterface::class);
+    return [$config, $client, new WorldNewsApiTool($config, $client)];
+}
 
 it('returns error if api key is missing', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn([]);
+    [$config, , $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->andReturn([]);
 
-    $result = $this->tool->execute(['q' => 'news'], 1);
+    $result = $tool->execute(['q' => 'news'], 1);
     expect($result->success)->toBeFalse()
         ->and($result->content)->toContain('is not configured');
 });
 
 it('makes correct search request and parses articles', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
+    [$config, $client, $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
 
     $response = Mockery::mock(ResponseInterface::class);
     $response->allows('getStatusCode')->andReturn(200);
@@ -41,13 +52,13 @@ it('makes correct search request and parses articles', function () {
         ],
     ]);
 
-    $this->client->expects('request')->with('GET', 'https://api.worldnewsapi.com/search-news', Mockery::on(function ($options) {
+    $client->expects('request')->with('GET', 'https://api.worldnewsapi.com/search-news', Mockery::on(function ($options) {
         return $options['headers']['x-api-key'] === 'wn_123'
             && $options['query']['text'] === 'world news'
             && $options['query']['number'] === 10;
     }))->andReturn($response);
 
-    $result = $this->tool->execute(['q' => 'world news'], 1);
+    $result = $tool->execute(['q' => 'world news'], 1);
 
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('World Event')
@@ -56,7 +67,8 @@ it('makes correct search request and parses articles', function () {
 });
 
 it('makes correct top-news request and parses clustered results', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
+    [$config, $client, $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
 
     $response = Mockery::mock(ResponseInterface::class);
     $response->allows('getStatusCode')->andReturn(200);
@@ -76,9 +88,9 @@ it('makes correct top-news request and parses clustered results', function () {
         ],
     ]);
 
-    $this->client->allows('request')->with('GET', 'https://api.worldnewsapi.com/top-news', Mockery::any())->andReturn($response);
+    $client->allows('request')->with('GET', 'https://api.worldnewsapi.com/top-news', Mockery::any())->andReturn($response);
 
-    $result = $this->tool->execute(['operation' => 'top-news', 'source-country' => 'us', 'language' => 'en'], 1);
+    $result = $tool->execute(['operation' => 'top-news', 'source-country' => 'us', 'language' => 'en'], 1);
 
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('Top Story')
@@ -87,17 +99,19 @@ it('makes correct top-news request and parses clustered results', function () {
 });
 
 it('returns error when search query is empty', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
+    [$config, , $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
 
-    $result = $this->tool->execute(['q' => ''], 1);
+    $result = $tool->execute(['q' => ''], 1);
     expect($result->success)->toBeFalse()
         ->and($result->content)->toContain('cannot be empty');
 });
 
 it('returns error when top-news missing source-country', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
+    [$config, , $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
 
-    $result = $this->tool->execute(['operation' => 'top-news'], 1);
+    $result = $tool->execute(['operation' => 'top-news'], 1);
     expect($result->success)->toBeFalse()
         ->and($result->content)->toContain('source-country is required');
 });
