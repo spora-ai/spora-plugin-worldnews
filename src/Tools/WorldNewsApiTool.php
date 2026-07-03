@@ -98,84 +98,32 @@ final class WorldNewsApiTool extends AbstractTool
         $settings = $this->configService->getEffectiveSettings(static::class, $agentId, $userId);
         $apiKey = $settings['core.worldnewsapi.api_key'] ?? '';
 
-        $validationFailure = $this->validateSearchArguments($query, $apiKey);
-        if ($validationFailure instanceof ToolResult) {
+        $validationFailure = $this->validateApiKey($apiKey);
+        if ($validationFailure !== null) {
             return $validationFailure;
         }
-
-        try {
-            return $this->performSearchRequest($arguments, $query, $apiKey, $settings);
-        } catch (Throwable $e) {
-            $this->logger?->error('WorldNewsAPI search exception', ['exception' => $e]);
-            return new ToolResult(false, "News search error: " . $e->getMessage());
-        }
-    }
-
-    private function validateSearchArguments(string $query, string $apiKey): ?ToolResult
-    {
         if ($query === '') {
             return new ToolResult(false, 'The search query cannot be empty.');
         }
-        if (empty($apiKey)) {
-            return new ToolResult(false, 'WorldNewsAPI key is not configured for this agent.');
-        }
-        return null;
-    }
 
-    private function performSearchRequest(array $arguments, string $query, string $apiKey, array $settings): ToolResult
-    {
-        $url = self::BASE_URL . '/search-news';
-        $this->logger?->debug('WorldNewsApiTool: HTTP request', [
-            'method' => 'GET',
-            'url' => $url,
-            'headers' => ['x-api-key' => '***'],
-            'query' => [
-                'text' => $query,
-                'number' => min(100, (int) ($arguments['number'] ?? 10)),
-                'offset' => (int) ($arguments['offset'] ?? 0),
-                'source-country' => $arguments['source-country'] ?? null,
-                'language' => $arguments['language'] ?? null,
-                'category' => $arguments['category'] ?? null,
-                'earliest-publish-date' => $arguments['earliest-publish-date'] ?? null,
-                'latest-publish-date' => $arguments['latest-publish-date'] ?? null,
-                'entities' => isset($arguments['entities']) ? implode(',', $arguments['entities']) : null,
-            ],
-            'timeout' => $this->effectiveTimeout($settings),
-        ]);
+        $queryParams = [
+            'text' => $query,
+            'number' => min(100, (int) ($arguments['number'] ?? 10)),
+            'offset' => (int) ($arguments['offset'] ?? 0),
+            'source-country' => $arguments['source-country'] ?? null,
+            'language' => $arguments['language'] ?? null,
+            'category' => $arguments['category'] ?? null,
+            'earliest-publish-date' => $arguments['earliest-publish-date'] ?? null,
+            'latest-publish-date' => $arguments['latest-publish-date'] ?? null,
+            'entities' => isset($arguments['entities']) ? implode(',', $arguments['entities']) : null,
+        ];
 
-        $response = $this->httpClient->request('GET', $url, [
-            'headers' => [
-                'x-api-key' => $apiKey,
-            ],
-            'query' => [
-                'text' => $query,
-                'number' => min(100, (int) ($arguments['number'] ?? 10)),
-                'offset' => (int) ($arguments['offset'] ?? 0),
-                'source-country' => $arguments['source-country'] ?? null,
-                'language' => $arguments['language'] ?? null,
-                'category' => $arguments['category'] ?? null,
-                'earliest-publish-date' => $arguments['earliest-publish-date'] ?? null,
-                'latest-publish-date' => $arguments['latest-publish-date'] ?? null,
-                'entities' => isset($arguments['entities']) ? implode(',', $arguments['entities']) : null,
-            ],
-            'timeout' => $this->effectiveTimeout($settings),
-        ]);
-
-        $statusCode = $response->getStatusCode();
-        $this->logger?->debug('WorldNewsApiTool: HTTP response', [
-            'status_code' => $statusCode,
-            'url' => $url,
-        ]);
-
-        if ($statusCode >= 400) {
-            $errorBody = $response->getContent(false);
-            $this->logger?->error('WorldNewsAPI search error', ['status' => $statusCode, 'body' => $errorBody]);
-            return new ToolResult(false, "News search failed with HTTP {$statusCode}");
+        $data = $this->performRequest(self::BASE_URL . '/search-news', $queryParams, $apiKey, $settings);
+        if ($data instanceof ToolResult) {
+            return $data;
         }
 
-        $data = $response->toArray(false);
-
-        return $this->formatNewsResults($query, $data['news'] ?? []);
+        return $this->formatNewsArticles("News Results for '{$query}':\n\n", $data['news'] ?? [], 'No recent news found for this topic.');
     }
 
     public function topNews(array $arguments, int $agentId, ?int $userId): ToolResult
@@ -185,80 +133,95 @@ final class WorldNewsApiTool extends AbstractTool
         $settings = $this->configService->getEffectiveSettings(static::class, $agentId, $userId);
         $apiKey = $settings['core.worldnewsapi.api_key'] ?? '';
 
-        $validationFailure = $this->validateTopNewsArguments($country, $language, $apiKey);
-        if ($validationFailure instanceof ToolResult) {
+        $validationFailure = $this->validateApiKey($apiKey);
+        if ($validationFailure !== null) {
             return $validationFailure;
         }
+        if ($country === '') {
+            return new ToolResult(false, 'source-country is required for top-news.');
+        }
+        if ($language === '') {
+            return new ToolResult(false, 'language is required for top-news.');
+        }
 
+        $queryParams = [
+            'source-country' => $country,
+            'language' => $language,
+        ];
+
+        $data = $this->performRequest(self::BASE_URL . '/top-news', $queryParams, $apiKey, $settings);
+        if ($data instanceof ToolResult) {
+            return $data;
+        }
+
+        $articles = [];
+        foreach (($data['top_news'] ?? []) as $group) {
+            foreach ($group['news'] ?? [] as $article) {
+                $articles[] = $article;
+            }
+        }
+        return $this->formatNewsArticles("Top News:\n\n", $articles, 'No top news available.');
+    }
+
+    private function validateApiKey(string $apiKey): ?ToolResult
+    {
+        if (empty($apiKey)) {
+            return new ToolResult(false, 'WorldNewsAPI key is not configured for this agent.');
+        }
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $queryParams
+     * @param array<string, mixed> $settings
+     * @return array<string, mixed>|ToolResult Decoded JSON on success, or a failure ToolResult.
+     */
+    private function performRequest(string $url, array $queryParams, string $apiKey, array $settings): array|ToolResult
+    {
+        $timeout = $this->effectiveTimeout($settings);
         try {
-            return $this->performTopNewsRequest($country, $language, $apiKey, $settings);
+            $this->logger?->debug('WorldNewsApiTool: HTTP request', [
+                'method' => 'GET',
+                'url' => $url,
+                'headers' => ['x-api-key' => '***'],
+                'query' => $queryParams,
+                'timeout' => $timeout,
+            ]);
+
+            $response = $this->httpClient->request('GET', $url, [
+                'headers' => ['x-api-key' => $apiKey],
+                'query' => $queryParams,
+                'timeout' => $timeout,
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            $this->logger?->debug('WorldNewsApiTool: HTTP response', [
+                'status_code' => $statusCode,
+                'url' => $url,
+            ]);
+
+            if ($statusCode >= 400) {
+                $this->logger?->error('WorldNewsAPI error', ['status' => $statusCode, 'body' => $response->getContent(false)]);
+                return new ToolResult(false, "WorldNewsAPI request failed with HTTP {$statusCode}");
+            }
+
+            return $response->toArray(false);
         } catch (Throwable $e) {
-            $this->logger?->error('WorldNewsAPI top-news exception', ['exception' => $e]);
-            return new ToolResult(false, "Top news error: " . $e->getMessage());
+            $this->logger?->error('WorldNewsAPI exception', ['exception' => $e]);
+            return new ToolResult(false, 'WorldNewsAPI request error: ' . $e->getMessage());
         }
     }
 
-    private function validateTopNewsArguments(string $country, string $language, string $apiKey): ?ToolResult
+    /**
+     * @param list<array<string, mixed>> $articles
+     */
+    private function formatNewsArticles(string $header, array $articles, string $emptyMessage): ToolResult
     {
-        return match (true) {
-            $country === ''   => new ToolResult(false, 'source-country is required for top-news.'),
-            $language === ''  => new ToolResult(false, 'language is required for top-news.'),
-            empty($apiKey)    => new ToolResult(false, 'WorldNewsAPI key is not configured for this agent.'),
-            default           => null,
-        };
-    }
-
-    private function performTopNewsRequest(string $country, string $language, string $apiKey, array $settings): ToolResult
-    {
-        $url = self::BASE_URL . '/top-news';
-        $this->logger?->debug('WorldNewsApiTool: HTTP request', [
-            'method' => 'GET',
-            'url' => $url,
-            'headers' => ['x-api-key' => '***'],
-            'query' => [
-                'source-country' => $country,
-                'language' => $language,
-            ],
-            'timeout' => $this->effectiveTimeout($settings),
-        ]);
-
-        $response = $this->httpClient->request('GET', $url, [
-            'headers' => [
-                'x-api-key' => $apiKey,
-            ],
-            'query' => [
-                'source-country' => $country,
-                'language' => $language,
-            ],
-            'timeout' => $this->effectiveTimeout($settings),
-        ]);
-
-        $statusCode = $response->getStatusCode();
-        $this->logger?->debug('WorldNewsApiTool: HTTP response', [
-            'status_code' => $statusCode,
-            'url' => $url,
-        ]);
-
-        if ($statusCode >= 400) {
-            $errorBody = $response->getContent(false);
-            $this->logger?->error('WorldNewsAPI top-news error', ['status' => $statusCode, 'body' => $errorBody]);
-            return new ToolResult(false, "Top news failed with HTTP {$statusCode}");
+        if ($articles === []) {
+            return new ToolResult(true, $header . $emptyMessage . "\n");
         }
 
-        $data = $response->toArray(false);
-
-        return $this->formatTopNewsResults($data['top_news'] ?? []);
-    }
-
-    private function formatNewsResults(string $query, array $articles): ToolResult
-    {
-        $output = "News Results for '{$query}':\n\n";
-
-        if (empty($articles)) {
-            $output .= "No recent news found for this topic.\n";
-            return new ToolResult(true, $output);
-        }
-
+        $output = $header;
         foreach ($articles as $i => $article) {
             $num = $i + 1;
             $title = $article['title'] ?? 'No Title';
@@ -270,33 +233,6 @@ final class WorldNewsApiTool extends AbstractTool
             $output .= "[{$num}] {$title} ({$source} - {$publishDate})\n";
             $output .= "{$summary}\n";
             $output .= "URL: {$url}\n\n";
-        }
-
-        return new ToolResult(true, $output);
-    }
-
-    private function formatTopNewsResults(array $topNews): ToolResult
-    {
-        $output = "Top News:\n\n";
-
-        if (empty($topNews)) {
-            $output .= "No top news available.\n";
-            return new ToolResult(true, $output);
-        }
-
-        foreach ($topNews as $categoryGroup) {
-            foreach ($categoryGroup['news'] ?? [] as $i => $article) {
-                $num = $i + 1;
-                $title = $article['title'] ?? 'No Title';
-                $source = $article['source'] ?? 'Unknown Source';
-                $publishDate = $article['publish_date'] ?? 'Unknown Date';
-                $summary = $article['summary'] ?? 'No description available';
-                $url = $article['url'] ?? '#';
-
-                $output .= "[{$num}] {$title} ({$source} - {$publishDate})\n";
-                $output .= "{$summary}\n";
-                $output .= "URL: {$url}\n\n";
-            }
         }
 
         return new ToolResult(true, $output);
