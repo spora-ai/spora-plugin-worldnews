@@ -118,7 +118,7 @@ final class WorldNewsApiTool extends AbstractTool
             return $validationFailure;
         }
 
-        return $this->executeTopNews($arguments, $apiKey, $settings, $country, $language);
+        return $this->executeTopNews($apiKey, $settings, $country, $language);
     }
 
     private function validateSearchRequest(string $apiKey, string $query): ?ToolResult
@@ -139,11 +139,9 @@ final class WorldNewsApiTool extends AbstractTool
         if ($apiKeyFailure !== null) {
             return $apiKeyFailure;
         }
-        if ($country === '') {
-            return new ToolResult(false, 'source-country is required for top-news.');
-        }
-        if ($language === '') {
-            return new ToolResult(false, 'language is required for top-news.');
+        if ($country === '' || $language === '') {
+            $field = $country === '' ? 'source-country' : 'language';
+            return new ToolResult(false, "{$field} is required for top-news.");
         }
         return null;
     }
@@ -175,10 +173,9 @@ final class WorldNewsApiTool extends AbstractTool
     }
 
     /**
-     * @param array<string, mixed> $arguments
      * @param array<string, mixed> $settings
      */
-    private function executeTopNews(array $arguments, string $apiKey, array $settings, string $country, string $language): ToolResult
+    private function executeTopNews(string $apiKey, array $settings, string $country, string $language): ToolResult
     {
         $queryParams = [
             'source-country' => $country,

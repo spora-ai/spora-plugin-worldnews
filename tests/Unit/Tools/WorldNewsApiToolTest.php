@@ -115,3 +115,12 @@ it('returns error when top-news missing source-country', function () {
     expect($result->success)->toBeFalse()
         ->and($result->content)->toContain('source-country is required');
 });
+
+it('returns error when top-news missing language (source-country provided)', function () {
+    [$config, , $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
+
+    $result = $tool->execute(['operation' => 'top-news', 'source-country' => 'us'], 1);
+    expect($result->success)->toBeFalse()
+        ->and($result->content)->toContain('language is required');
+});
