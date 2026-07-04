@@ -18,8 +18,7 @@ After install, the tool is exposed as `worldnews:search`.
 ## Configuration
 
 Settings → Tools → World News. The plugin needs a single API key, issued at
-<https://worldnewsapi.com> → Console (free tier available; paid plans start
-at $9/month).
+<https://worldnewsapi.com> → Console. A free tier is available.
 
 | Setting | Required | Default |
 |---|---|---|
@@ -30,10 +29,6 @@ at $9/month).
 `api_key` is encrypted at rest by Spora's `ToolConfigService`, masked in the
 UI, and never logged. Requests send it as the `x-api-key` header per the
 WorldNewsAPI contract.
-
-The free tier provides 50 points/day with no credit card; each `/search-news`
-call costs 1 point and each `/top-news` call costs 1 point. Paid plans start
-at $9/month.
 
 ## Per-tool parameters
 
@@ -74,7 +69,6 @@ a single article list.
 ## Vendor links
 
 - Signup + console: <https://worldnewsapi.com>
-- Pricing: <https://worldnewsapi.com/pricing> (free 50 pts/day; paid from $9/mo)
 - API documentation: <https://worldnewsapi.com/docs/>
 - Dashboard: <https://console.worldnewsapi.com/>
 
