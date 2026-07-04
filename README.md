@@ -1,26 +1,106 @@
-# WorldNewsPlugin
+# World News Plugin for Spora
 
-World News API headlines and search for Spora agents.
+Adds [World News API](https://worldnewsapi.com) headline and search
+capabilities — **top news by country** and **full-text/semantic news search**
+across 170,000+ articles/day from 210+ countries in 86+ languages — to
+[Spora](https://github.com/spora-ai/Spora) agents.
 
-**Status: placeholder** (`v0.1.0`). The real tool class is not in this repo
-yet — it will be added in a follow-up release (`v0.2.0`) once the B1–B7
-tool extraction lands in `spora-ai/spora-core`.
+## Installation
 
-For now this package:
+```bash
+# Recommended — install via the Spora CLI
+php bin/spora plugin:install spora-ai/spora-plugin-worldnews
+php bin/spora spora:install   # applies the plugin's migration
 
-- Declares the `worldnews` plugin slug (visible in `php bin/spora plugin:list`)
-- Exposes an empty `tools()` hook (no tools contributed yet)
-- Boots cleanly in a Spora install via `composer require spora-ai/spora-plugin-worldnews:^0.1`
+# For development against a sibling git clone, pass --path:
+php bin/spora plugin:install spora-ai/spora-plugin-worldnews --path=/abs/path/to/checkout
 
-## Local development
+# Alternative — drop a clone into the Spora repo
+git clone https://github.com/spora-ai/spora-plugin-worldnews.git plugins/worldnews
+php bin/spora spora:install
+
+# Alternative — external path (no Spora checkout changes)
+git clone https://github.com/spora-ai/spora-plugin-worldnews.git /opt/spora-plugins/worldnews
+echo 'SPORA_PLUGINS_PATHS=/opt/spora-plugins/worldnews' >> .env
+php bin/spora spora:install
+```
+
+After install, the tool is exposed as `worldnews:search`.
+
+## Configuration
+
+Settings → Tools → World News. The plugin needs a single API key, issued at
+<https://worldnewsapi.com> → Console (free tier available; paid plans start
+at $9/month).
+
+| Setting | Required | Default |
+|---|---|---|
+| `plugin.worldnews.api_key` | yes | — |
+| `plugin.worldnews.base_url` | no | `https://api.worldnewsapi.com` |
+| `plugin.worldnews.http_timeout` | no | `30` (seconds; respects `SPORA_TOOL_HTTP_TIMEOUT` env) |
+
+`api_key` is encrypted at rest by Spora's `ToolConfigService`, masked in the
+UI, and never logged. Requests send it as the `x-api-key` header per the
+WorldNewsAPI contract.
+
+The free tier provides 50 points/day with no credit card; each `/search-news`
+call costs 1 point and each `/top-news` call costs 1 point. Paid plans start
+at $9/month.
+
+## Per-tool parameters
+
+The plugin exposes one tool, `worldnews:search`, with two operations selected
+by the `operation` discriminator (`search` or `top-news`). Both return
+`ToolResult::ok` (formatted list of articles with title, source, publish
+date, summary, URL) or `ToolResult::fail`. The tool never throws — a single
+API failure cannot kill the agent loop.
+
+### `search` — `/search-news`
+
+Searches news by text and optional filters. Returns `news[]` from the
+upstream response.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `q` | string | yes | Keywords or phrases to search for |
+| `source-country` | string | no | ISO country code, e.g. `us`, `de` |
+| `language` | string | no | ISO 639-1 language code, e.g. `en`, `de` |
+| `category` | string | no | News category, e.g. `politics`, `sports`, `technology` |
+| `earliest-publish-date` | string | no | ISO 8601 date, e.g. `2026-04-01` |
+| `latest-publish-date` | string | no | ISO 8601 date, e.g. `2026-04-23` |
+| `entities` | array\<string\> | no | Semantic entities (people, organizations, locations) |
+| `number` | integer | no | Max results (1–100, default 10) |
+| `offset` | integer | no | Pagination offset |
+
+### `top-news` — `/top-news`
+
+Returns top trending news for a specific country/language combination. The
+upstream response is grouped per country; the tool flattens the groups into
+a single article list.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `source-country` | string | yes | ISO country code, e.g. `us`, `de` |
+| `language` | string | yes | ISO 639-1 language code, e.g. `en`, `de` |
+
+## Vendor links
+
+- Signup + console: <https://worldnewsapi.com>
+- Pricing: <https://worldnewsapi.com/pricing> (free 50 pts/day; paid from $9/mo)
+- API documentation: <https://worldnewsapi.com/docs/>
+- Dashboard: <https://console.worldnewsapi.com/>
+
+## Development
 
 ```bash
 composer install
-./vendor/bin/pest
-./vendor/bin/phpstan analyse --no-progress
+./vendor/bin/pest           # unit tests
+./vendor/bin/phpstan analyse
 ./vendor/bin/php-cs-fixer fix --dry-run --diff
 ```
 
-## License
-
-MIT
+CI: `.github/workflows/ci.yml` — Pest on PHP 8.4 + 8.5, PHPStan level per
+`phpstan.neon`, php-cs-fixer dry-run. A separate `sonar` job uploads
+coverage + JUnit to SonarCloud (project key `spora-ai_spora-plugin-worldnews`)
+so the `new_coverage` metric is measurable per PR. Requires the
+`SONAR_TOKEN` secret in the repo. MIT license.
