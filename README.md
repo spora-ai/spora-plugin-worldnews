@@ -8,22 +8,10 @@ across 170,000+ articles/day from 210+ countries in 86+ languages — to
 ## Installation
 
 ```bash
-# Recommended — install via the Spora CLI
 php bin/spora plugin:install spora-ai/spora-plugin-worldnews
-php bin/spora spora:install   # applies the plugin's migration
-
-# For development against a sibling git clone, pass --path:
-php bin/spora plugin:install spora-ai/spora-plugin-worldnews --path=/abs/path/to/checkout
-
-# Alternative — drop a clone into the Spora repo
-git clone https://github.com/spora-ai/spora-plugin-worldnews.git plugins/worldnews
-php bin/spora spora:install
-
-# Alternative — external path (no Spora checkout changes)
-git clone https://github.com/spora-ai/spora-plugin-worldnews.git /opt/spora-plugins/worldnews
-echo 'SPORA_PLUGINS_PATHS=/opt/spora-plugins/worldnews' >> .env
-php bin/spora spora:install
 ```
+
+For local development against a sibling checkout, pass `--path=/abs/path/to/checkout`.
 
 After install, the tool is exposed as `worldnews:search`.
 
