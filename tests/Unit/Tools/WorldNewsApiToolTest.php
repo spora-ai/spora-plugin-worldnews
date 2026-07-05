@@ -33,7 +33,7 @@ it('returns error if api key is missing', function () {
 
 it('makes correct search request and parses articles', function () {
     [$config, $client, $tool] = makeWorldNewsTool();
-    $config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
+    $config->allows('getEffectiveSettings')->andReturn(['api_key' => 'wn_123']);
 
     $response = Mockery::mock(ResponseInterface::class);
     $response->allows('getStatusCode')->andReturn(200);
@@ -68,7 +68,7 @@ it('makes correct search request and parses articles', function () {
 
 it('makes correct top-news request and parses clustered results', function () {
     [$config, $client, $tool] = makeWorldNewsTool();
-    $config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
+    $config->allows('getEffectiveSettings')->andReturn(['api_key' => 'wn_123']);
 
     $response = Mockery::mock(ResponseInterface::class);
     $response->allows('getStatusCode')->andReturn(200);
@@ -100,7 +100,7 @@ it('makes correct top-news request and parses clustered results', function () {
 
 it('returns error when search query is empty', function () {
     [$config, , $tool] = makeWorldNewsTool();
-    $config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
+    $config->allows('getEffectiveSettings')->andReturn(['api_key' => 'wn_123']);
 
     $result = $tool->execute(['q' => ''], 1);
     expect($result->success)->toBeFalse()
@@ -109,7 +109,7 @@ it('returns error when search query is empty', function () {
 
 it('returns error when top-news missing source-country', function () {
     [$config, , $tool] = makeWorldNewsTool();
-    $config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
+    $config->allows('getEffectiveSettings')->andReturn(['api_key' => 'wn_123']);
 
     $result = $tool->execute(['operation' => 'top-news'], 1);
     expect($result->success)->toBeFalse()
@@ -118,7 +118,7 @@ it('returns error when top-news missing source-country', function () {
 
 it('returns error when top-news missing language (source-country provided)', function () {
     [$config, , $tool] = makeWorldNewsTool();
-    $config->allows('getEffectiveSettings')->andReturn(['core.worldnewsapi.api_key' => 'wn_123']);
+    $config->allows('getEffectiveSettings')->andReturn(['api_key' => 'wn_123']);
 
     $result = $tool->execute(['operation' => 'top-news', 'source-country' => 'us'], 1);
     expect($result->success)->toBeFalse()

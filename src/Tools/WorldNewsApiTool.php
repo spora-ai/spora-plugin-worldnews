@@ -32,14 +32,14 @@ use Throwable;
 #[ToolOperation(name: 'search', description: 'Search news by text, country, language, or semantic entities', enabledByDefault: true, requiresApprovalByDefault: false, discriminatorKey: 'operation')]
 #[ToolOperation(name: 'top-news', description: 'Get top trending news for a specific country', enabledByDefault: true, requiresApprovalByDefault: false, discriminatorKey: 'operation')]
 #[ToolSetting(
-    key: 'core.worldnewsapi.api_key',
+    key: 'api_key',
     label: 'WorldNewsAPI Key',
     type: 'password',
     description: 'API key for worldnewsapi.com',
     required: true,
 )]
 #[ToolSetting(
-    key: 'core.worldnewsapi.http_timeout',
+    key: 'http_timeout',
     label: 'HTTP Timeout',
     type: 'text',
     description: 'Seconds before an HTTP request fails (default: 30)',
@@ -65,8 +65,8 @@ final class WorldNewsApiTool extends AbstractTool
 
     private function effectiveTimeout(array $settings): int
     {
-        if (isset($settings['core.worldnewsapi.http_timeout']) && (int) $settings['core.worldnewsapi.http_timeout'] > 0) {
-            return (int) $settings['core.worldnewsapi.http_timeout'];
+        if (isset($settings['http_timeout']) && (int) $settings['http_timeout'] > 0) {
+            return (int) $settings['http_timeout'];
         }
         $envTimeout = (int) ($_ENV['SPORA_TOOL_HTTP_TIMEOUT'] ?? getenv('SPORA_TOOL_HTTP_TIMEOUT') ?: 0);
         return $envTimeout > 0 ? $envTimeout : 30;
@@ -96,7 +96,7 @@ final class WorldNewsApiTool extends AbstractTool
     {
         $query = trim((string) ($arguments['q'] ?? ''));
         $settings = $this->configService->getEffectiveSettings(static::class, $agentId, $userId);
-        $apiKey = $settings['core.worldnewsapi.api_key'] ?? '';
+        $apiKey = $settings['api_key'] ?? '';
 
         $validationFailure = $this->validateSearchRequest($apiKey, $query);
         if ($validationFailure !== null) {
@@ -111,7 +111,7 @@ final class WorldNewsApiTool extends AbstractTool
         $country = trim((string) ($arguments['source-country'] ?? ''));
         $language = trim((string) ($arguments['language'] ?? ''));
         $settings = $this->configService->getEffectiveSettings(static::class, $agentId, $userId);
-        $apiKey = $settings['core.worldnewsapi.api_key'] ?? '';
+        $apiKey = $settings['api_key'] ?? '';
 
         $validationFailure = $this->validateTopNewsRequest($apiKey, $country, $language);
         if ($validationFailure !== null) {
