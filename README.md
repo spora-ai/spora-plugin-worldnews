@@ -22,9 +22,8 @@ Settings → Tools → World News. The plugin needs a single API key, issued at
 
 | Setting | Required | Default |
 |---|---|---|
-| `plugin.worldnews.api_key` | yes | — |
-| `plugin.worldnews.base_url` | no | `https://api.worldnewsapi.com` |
-| `plugin.worldnews.http_timeout` | no | `30` (seconds; respects `SPORA_TOOL_HTTP_TIMEOUT` env) |
+| `api_key` | yes | — |
+| `http_timeout` | no | `30` (seconds; respects `SPORA_TOOL_HTTP_TIMEOUT` env) |
 
 `api_key` is encrypted at rest by Spora's `ToolConfigService`, masked in the
 UI, and never logged. Requests send it as the `x-api-key` header per the
