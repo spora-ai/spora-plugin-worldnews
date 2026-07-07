@@ -3,5 +3,5 @@
   "slug": "worldnews",
   "description": "World News API headlines and search for Spora agents.",
   "class": "Spora\\Plugins\\WorldNews\\WorldNewsPlugin",
-  "icon": "puzzle"
+  "icon": "globe"
 }
