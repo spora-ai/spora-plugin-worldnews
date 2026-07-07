@@ -124,3 +124,100 @@ it('returns error when top-news missing language (source-country provided)', fun
     expect($result->success)->toBeFalse()
         ->and($result->content)->toContain('language is required');
 });
+
+it('uses http_timeout setting when provided', function () {
+    [$config, $client, $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->andReturn([
+        'api_key' => 'wn_123',
+        'http_timeout' => 60,
+    ]);
+
+    $response = Mockery::mock(ResponseInterface::class);
+    $response->allows('getStatusCode')->andReturn(200);
+    $response->allows('toArray')->andReturn(['news' => []]);
+
+    $client->expects('request')->with('GET', Mockery::any(), Mockery::on(function ($options) {
+        return ($options['timeout'] ?? null) === 60;
+    }))->andReturn($response);
+
+    $result = $tool->execute(['q' => 'foo'], 1);
+    expect($result->success)->toBeTrue();
+});
+
+it('describes the action for top-news and search operations', function () {
+    [$config, , $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->andReturn(['api_key' => 'wn_123']);
+
+    expect($tool->describeAction(['operation' => 'top-news', 'source-country' => 'us']))
+        ->toBe("Fetch top news from WorldNewsAPI for country: 'us'");
+
+    expect($tool->describeAction(['q' => 'foo']))
+        ->toBe("Search WorldNewsAPI for: 'foo'");
+});
+
+it('returns api-key error before validating top-news fields', function () {
+    [$config, , $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->andReturn([]);
+
+    $result = $tool->execute([
+        'operation' => 'top-news',
+        'source-country' => 'us',
+        'language' => 'en',
+    ], 1);
+
+    expect($result->success)->toBeFalse()
+        ->and($result->content)->toContain('is not configured');
+});
+
+it('returns HTTP error ToolResult when the API responds with a 4xx/5xx status (search and top-news)', function () {
+    [$config, $client, $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->andReturn(['api_key' => 'wn_123']);
+
+    $response = Mockery::mock(ResponseInterface::class);
+    $response->allows('getStatusCode')->andReturn(500);
+    $response->allows('getContent')->with(false)->andReturn('internal error');
+
+    $client->allows('request')->with('GET', Mockery::any(), Mockery::any())->andReturn($response);
+
+    $search = $tool->execute(['q' => 'foo'], 1);
+    expect($search->success)->toBeFalse()
+        ->and($search->content)->toContain('HTTP 500');
+
+    $topNews = $tool->execute([
+        'operation' => 'top-news',
+        'source-country' => 'us',
+        'language' => 'en',
+    ], 1);
+    expect($topNews->success)->toBeFalse()
+        ->and($topNews->content)->toContain('HTTP 500');
+});
+
+it('returns exception ToolResult when the HTTP request throws', function () {
+    [$config, $client, $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->andReturn(['api_key' => 'wn_123']);
+
+    $client->allows('request')->andThrow(new RuntimeException('boom'));
+
+    $result = $tool->execute(['q' => 'foo'], 1);
+
+    expect($result->success)->toBeFalse()
+        ->and($result->content)->toContain('WorldNewsAPI request error')
+        ->and($result->content)->toContain('boom');
+});
+
+it('renders the empty-articles header without rows when the API returns no news', function () {
+    [$config, $client, $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->andReturn(['api_key' => 'wn_123']);
+
+    $response = Mockery::mock(ResponseInterface::class);
+    $response->allows('getStatusCode')->andReturn(200);
+    $response->allows('toArray')->andReturn(['news' => []]);
+
+    $client->allows('request')->andReturn($response);
+
+    $result = $tool->execute(['q' => 'silent news day'], 1);
+
+    expect($result->success)->toBeTrue()
+        ->and($result->content)->toContain('No recent news found')
+        ->and($result->content)->not->toContain('[1]');
+});
