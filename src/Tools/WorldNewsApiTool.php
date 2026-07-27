@@ -44,9 +44,9 @@ use Throwable;
     type: 'text',
     description: 'Seconds before an HTTP request fails (default: 30)',
 )]
-#[ToolParameter(name: 'q', type: 'string', description: 'Keywords or phrases to search for (required for search).', required: false)]
-#[ToolParameter(name: 'source-country', type: 'string', description: 'ISO country code, e.g. "us" or "de" (required for top-news).', required: false)]
-#[ToolParameter(name: 'language', type: 'string', description: 'ISO 2-letter language code, e.g. "en" or "de" (required for top-news).', required: false)]
+#[ToolParameter(name: 'q', type: 'string', description: 'Keywords or phrases to search for (required for search).', required: ['search'])]
+#[ToolParameter(name: 'source-country', type: 'string', description: 'ISO country code, e.g. "us" or "de" (required for top-news).', required: ['top-news'])]
+#[ToolParameter(name: 'language', type: 'string', description: 'ISO 2-letter language code, e.g. "en" or "de" (required for top-news).', required: ['top-news'])]
 #[ToolParameter(name: 'category', type: 'string', description: 'News category, e.g. "politics", "sports", "technology".', required: false)]
 #[ToolParameter(name: 'earliest-publish-date', type: 'string', description: 'Earliest publish date (ISO 8601 format, e.g. 2026-04-01).', required: false)]
 #[ToolParameter(name: 'latest-publish-date', type: 'string', description: 'Latest publish date (ISO 8601 format, e.g. 2026-04-23).', required: false)]
