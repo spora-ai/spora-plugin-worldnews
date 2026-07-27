@@ -34,25 +34,20 @@ function worldNewsToolParameterArgs(string $name): array
     throw new RuntimeException("ToolParameter '{$name}' not declared on " . WorldNewsApiTool::class);
 }
 
-function worldNewsToolOperationNames(): array
+function worldNewsToolDiscriminatorKey(): ?string
 {
     $reflection = new ReflectionClass(WorldNewsApiTool::class);
-    $names = [];
     foreach ($reflection->getAttributes(ToolOperation::class) as $attr) {
         $args = $attr->getArguments();
-        if (isset($args['name'])) {
-            $names[] = $args['name'];
+        if (array_key_exists('discriminatorKey', $args)) {
+            return $args['discriminatorKey'];
         }
     }
-
-    return $names;
+    return null;
 }
 
 it('uses operation as discriminator key', function () {
-    // Defensive: lock the discriminated key so a future refactor doesn't
-    // silently switch the descriptor and let `required` bindings dangle.
-    $ops = worldNewsToolOperationNames();
-    expect($ops)->toContain('search', 'top-news');
+    expect(worldNewsToolDiscriminatorKey())->toBe('operation');
 });
 
 it('binds q to search only', function () {
