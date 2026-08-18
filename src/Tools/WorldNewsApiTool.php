@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spora\Plugins\WorldNews\Tools;
 
 use Psr\Log\LoggerInterface;
+use Spora\Services\PrincipalContext;
 use Spora\Services\ToolConfigService;
 use Spora\Tools\AbstractTool;
 use Spora\Tools\Attributes\Tool;
@@ -72,8 +73,13 @@ final class WorldNewsApiTool extends AbstractTool
         return $envTimeout > 0 ? $envTimeout : 30;
     }
 
-    public function execute(array $arguments, int $agentId, ?int $userId = null, ?int $taskId = null): ToolResult
-    {
+    public function execute(
+        array $arguments,
+        int $agentId,
+        ?int $userId = null,
+        ?int $taskId = null,
+        ?PrincipalContext $context = null,
+    ): ToolResult {
         $operation = $this->getOperationName($arguments);
 
         return match ($operation) {
