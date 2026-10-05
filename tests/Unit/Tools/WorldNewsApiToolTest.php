@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Spora\Models\Principal;
 use Spora\Plugins\WorldNews\Tools\WorldNewsApiTool;
+use Spora\Services\PrincipalContext;
 use Spora\Services\ToolConfigService;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -29,6 +31,16 @@ it('returns error if api key is missing', function () {
     $result = $tool->execute(['q' => 'news'], 1);
     expect($result->success)->toBeFalse()
         ->and($result->content)->toContain('is not configured');
+});
+
+it('resolves the settings owner from the principal context, not the legacy user id', function () {
+    [$config, , $tool] = makeWorldNewsTool();
+    $config->allows('getEffectiveSettings')->with(WorldNewsApiTool::class, 1, 99)->andReturn([]);
+
+    $context = new PrincipalContext(7, Principal::TYPE_USER, 99, 99);
+    $result = $tool->execute(['q' => 'news'], 1, 4242, null, $context);
+
+    expect($result->content)->toContain('is not configured');
 });
 
 it('makes correct search request and parses articles', function () {

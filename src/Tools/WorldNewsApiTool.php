@@ -73,6 +73,12 @@ final class WorldNewsApiTool extends AbstractTool
         return $envTimeout > 0 ? $envTimeout : 30;
     }
 
+    /**
+     * @param int|null $userId Deprecated: the owner now comes from
+     *                          `$context->ownerUserId`, which always held this same
+     *                          value. Removed from the interface in core 0.30.0 —
+     *                          read the context instead.
+     */
     public function execute(
         array $arguments,
         int $agentId,
@@ -80,11 +86,12 @@ final class WorldNewsApiTool extends AbstractTool
         ?int $taskId = null,
         ?PrincipalContext $context = null,
     ): ToolResult {
+        $ownerId   = $context?->ownerUserId;
         $operation = $this->getOperationName($arguments);
 
         return match ($operation) {
-            'top-news' => $this->topNews($arguments, $agentId, $userId),
-            default => $this->search($arguments, $agentId, $userId),
+            'top-news' => $this->topNews($arguments, $agentId, $ownerId),
+            default => $this->search($arguments, $agentId, $ownerId),
         };
     }
 
