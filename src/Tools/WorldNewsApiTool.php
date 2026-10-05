@@ -73,6 +73,9 @@ final class WorldNewsApiTool extends AbstractTool
         return $envTimeout > 0 ? $envTimeout : 30;
     }
 
+    /**
+     * @deprecated 1.0 pass $context->ownerUserId instead; removed from the interface in core 0.30.0.
+     */
     public function execute(
         array $arguments,
         int $agentId,
@@ -80,11 +83,12 @@ final class WorldNewsApiTool extends AbstractTool
         ?int $taskId = null,
         ?PrincipalContext $context = null,
     ): ToolResult {
+        $ownerId   = $context?->ownerUserId;
         $operation = $this->getOperationName($arguments);
 
         return match ($operation) {
-            'top-news' => $this->topNews($arguments, $agentId, $userId),
-            default => $this->search($arguments, $agentId, $userId),
+            'top-news' => $this->topNews($arguments, $agentId, $ownerId),
+            default => $this->search($arguments, $agentId, $ownerId),
         };
     }
 
