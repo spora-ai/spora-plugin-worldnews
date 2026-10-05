@@ -38,7 +38,7 @@ it('resolves the settings owner from the principal context, not the legacy user 
     $config->allows('getEffectiveSettings')->with(WorldNewsApiTool::class, 1, 99)->andReturn([]);
 
     $context = new PrincipalContext(7, Principal::TYPE_USER, 99, 99);
-    $result = $tool->execute(['q' => 'news'], 1, 4242, null, $context);
+    $result = $tool->execute(['q' => 'news'], 1, null, $context);
 
     expect($result->content)->toContain('is not configured');
 });
