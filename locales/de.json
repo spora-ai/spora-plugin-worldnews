@@ -1,0 +1,5 @@
+{
+  "World News Search": "Weltnachrichten-Suche",
+  "API key for worldnewsapi.com": "API-Schlüssel für worldnewsapi.com",
+  "Seconds before an HTTP request fails (default: 30)": "Sekunden, bis eine HTTP-Anfrage fehlschlägt (Standard: 30)"
+}
