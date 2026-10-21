@@ -18,7 +18,6 @@ use Throwable;
 
 /**
  * Searches world news from thousands of sources via WorldNewsAPI.
- * Supports text search, category filters, date ranges, and top news by country.
  */
 #[Tool(
     name: 'worldnews_search',
@@ -27,9 +26,8 @@ use Throwable;
     category: 'research',
 )]
 // Historical wart: this tool has always used the LLM-facing key 'operation'
-// instead of the default 'action'. The discriminatorKey on every operation
-// declares that explicitly so the auto-synthesized property name matches what
-// the LLM is told to send (and what dispatch reads).
+// rather than the default 'action'. Every operation declares it explicitly so
+// the synthesized property name is the one the LLM sends and dispatch reads.
 #[ToolOperation(name: 'search', description: 'Search news by text, country, language, or semantic entities', enabledByDefault: true, requiresApprovalByDefault: false, discriminatorKey: 'operation')]
 #[ToolOperation(name: 'top-news', description: 'Get top trending news for a specific country', enabledByDefault: true, requiresApprovalByDefault: false, discriminatorKey: 'operation')]
 #[ToolSetting(
