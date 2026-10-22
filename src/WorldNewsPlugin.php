@@ -24,4 +24,16 @@ final class WorldNewsPlugin extends AbstractPlugin
             WorldNewsApiTool::class,
         ];
     }
+
+    /**
+     * The plugin's `locales/` directory — one `<lang>.json` per language.
+     *
+     * @return string[]
+     */
+    public function translationsPaths(): array
+    {
+        return [
+            __DIR__ . '/../locales',
+        ];
+    }
 }
